@@ -1,9 +1,8 @@
 {
   "name": "note-crypt-web",
-  "version": "1.0.0",
-  "description": "Secure encrypted notes with AES-256-GCM",
+  "version": "3.0.0",
+  "description": "NOTE CRYPT - Secure Encrypted Notes with Large Image Support",
   "scripts": {
     "dev": "serve ."
-  },
-  "dependencies": {}
+  }
 }
