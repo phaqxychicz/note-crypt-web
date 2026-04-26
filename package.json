@@ -1,0 +1,9 @@
+{
+  "name": "note-crypt-web",
+  "version": "1.0.0",
+  "description": "Secure encrypted notes with AES-256-GCM",
+  "scripts": {
+    "dev": "serve ."
+  },
+  "dependencies": {}
+}

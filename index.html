@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>NOTE CRYPT - Secure Encrypted Notes</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- LAYAR LOGIN -->
+        <div id="login-screen" class="screen">
+            <div class="login-container">
+                <div class="logo">
+                    <span class="logo-red">NOTE</span>
+                    <span class="logo-white">CRYPT</span>
+                </div>
+                <div class="logo-sub">Secure Encrypted Vault</div>
+                
+                <div id="attempt-warning" class="attempt-warning" style="display: none;"></div>
+                
+                <div class="input-group">
+                    <label>PASSPHRASE</label>
+                    <input type="password" id="passphrase-input" class="pass-input" placeholder="••••••••" autocomplete="off">
+                    <div class="input-hint">Minimal 8 karakter | Lupa passphrase = data hilang permanen</div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="login-btn" class="btn btn-primary">BUKA VAULT</button>
+                    <button id="decoy-btn" class="btn btn-secondary">DECOY MODE</button>
+                    <button id="wipe-btn" class="btn btn-danger">⚠️ EMERGENCY WIPE</button>
+                </div>
+                
+                <div class="info-text">
+                    <span>🔐 Enkripsi AES-256-GCM | Data hanya di browser Anda</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- LAYAR SETUP PASSPHRASE (FIRST TIME) -->
+        <div id="setup-screen" class="screen" style="display: none;">
+            <div class="login-container">
+                <div class="logo">
+                    <span class="logo-red">NOTE</span>
+                    <span class="logo-white">CRYPT</span>
+                </div>
+                <div class="logo-sub">First Time Setup</div>
+                
+                <div class="input-group">
+                    <label>BUAT PASSPHRASE BARU</label>
+                    <input type="password" id="new-passphrase" class="pass-input" placeholder="Minimal 8 karakter">
+                </div>
+                <div class="input-group">
+                    <label>ULANGI PASSPHRASE</label>
+                    <input type="password" id="confirm-passphrase" class="pass-input" placeholder="Ketik ulang">
+                </div>
+                
+                <div class="button-group">
+                    <button id="setup-create-btn" class="btn btn-primary">BUAT VAULT</button>
+                </div>
+                
+                <div class="info-text warning">
+                    ⚠️ PERINGATAN: Lupa passphrase = semua data hilang permanen. Tidak bisa recover!
+                </div>
+            </div>
+        </div>
+        
+        <!-- LAYAR UTAMA (MAIN APP) -->
+        <div id="main-screen" class="screen" style="display: none;">
+            <!-- Header -->
+            <div class="header">
+                <div class="header-left">
+                    <span class="header-logo">NOTE<span class="red">CRYPT</span></span>
+                    <span id="mode-badge" class="mode-badge">🔐 SECURE VAULT</span>
+                </div>
+                <div class="header-right">
+                    <button id="new-note-btn" class="icon-btn" title="Catatan Baru">+</button>
+                    <button id="logout-btn" class="icon-btn" title="Logout">🚪</button>
+                    <button id="wipe-main-btn" class="icon-btn danger" title="Hapus Semua Data">💀</button>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <div class="sidebar-title">📓 CATATAN</div>
+                    <div id="notes-list" class="notes-list">
+                        <div class="empty-state">Belum ada catatan<br>Klik + untuk membuat</div>
+                    </div>
+                    <div class="sidebar-footer">
+                        <div class="storage-info" id="storage-info"></div>
+                    </div>
+                </div>
+                
+                <!-- Editor -->
+                <div class="editor">
+                    <div class="editor-title-bar">
+                        <input type="text" id="note-title" class="note-title-input" placeholder="Judul catatan...">
+                    </div>
+                    
+                    <!-- Attachment Panel -->
+                    <div id="attachment-panel" class="attachment-panel">
+                        <div class="attachment-header">
+                            <span>📎 LAMPIRAN GAMBAR</span>
+                            <button id="add-image-btn" class="small-btn">+ Tambah Gambar</button>
+                        </div>
+                        <div id="attachment-list" class="attachment-list">
+                            <div class="empty-attachment">Belum ada gambar</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Text Editor -->
+                    <textarea id="note-content" class="note-content" placeholder="Tulis catatanmu di sini...&#10;&#10;✨ Fitur:&#10;- Teks biasa dengan format bebas&#10;- Upload gambar (klik thumbnail untuk lihat HD)&#10;- Semua data terenkripsi AES-256-GCM"></textarea>
+                    
+                    <!-- Editor Footer -->
+                    <div class="editor-footer">
+                        <button id="save-note-btn" class="btn-save">💾 SIMPAN</button>
+                        <button id="delete-note-btn" class="btn-delete">🗑️ HAPUS CATATAN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal Full Image Viewer -->
+        <div id="image-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span id="modal-title">Gambar</span>
+                    <button id="modal-close" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <img id="modal-image" src="" alt="Full size image">
+                </div>
+                <div class="modal-footer">
+                    <span id="modal-info"></span>
+                    <button id="modal-save" class="modal-save-btn">💾 Simpan Gambar</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+            <div>Memproses...</div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
