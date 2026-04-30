@@ -1,7 +1,6 @@
 /**
- * NOTE CRYPT - Web Version
- * Support upload gambar BEBAS UKURAN (chunked upload)
- * File dipecah per 1MB, aman untuk gambar 100MB+
+ * NOTE CRYPT - Web Version (Login Only - No Register Button)
+ * Jika sudah punya akun, tinggal masukkan passphrase
  */
 
 // ============================================================
@@ -182,7 +181,7 @@ async function wipeAllData() {
 }
 
 // ============================================================
-// GAMBAR (CHUNKED UPLOAD - SUPPORT UKURAN BESAR)
+// GAMBAR (CHUNKED UPLOAD)
 // ============================================================
 async function saveLargeImage(file) {
     return new Promise(async (resolve, reject) => {
@@ -399,22 +398,31 @@ async function onLogin() {
         } else {
             const attempts = await getFailedAttempts();
             if (attempts >= 3) { if (confirm('3x gagal! Hapus data?')) { await wipeAllData(); location.reload(); } }
-            else { const warn = document.getElementById('attempt-warning'); warn.textContent = `⚠️ Salah! Sisa: ${3 - attempts}/3`; warn.style.display = 'block'; }
+            else { const warn = document.getElementById('attempt-warning'); warn.textContent = `⚠️ Passphrase salah! Sisa percobaan: ${3 - attempts}/3`; warn.style.display = 'block'; document.getElementById('passphrase-input').value = ''; }
         }
     } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); }
 }
 async function onLogout() { currentPassphrase = null; currentNoteId = null; notesCache = []; showScreen('login-screen'); document.getElementById('passphrase-input').value = ''; document.getElementById('attempt-warning').style.display = 'none'; }
 async function onWipe() { if (!confirm('⚠️ HAPUS SEMUA DATA? (TIDAK BISA KEMBALI)')) return; if (prompt('Ketik "HAPUS" untuk konfirmasi') !== 'HAPUS') return; showLoading(); try { await wipeAllData(); alert('Data dihapus. Refresh...'); location.reload(); } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); } }
 async function onDecoyMode() { currentPassphrase = 'decoy_mode'; notesCache = []; showScreen('main-screen'); document.getElementById('mode-badge').textContent = '📦 DECOY MODE'; renderNotes(); currentNoteId = null; document.getElementById('note-title').value = ''; document.getElementById('note-content').value = ''; document.getElementById('attachment-list').innerHTML = '<div class="empty-attachment">Belum ada gambar</div>'; }
-async function onSetup() { const p1 = document.getElementById('new-passphrase').value; const p2 = document.getElementById('confirm-passphrase').value; if (p1.length < 8) { alert('Minimal 8 karakter'); return; } if (p1 !== p2) { alert('Passphrase tidak cocok'); return; } showLoading(); try { await registerPassphrase(p1); alert('Vault dibuat! Silakan login.'); showScreen('login-screen'); document.getElementById('passphrase-input').value = ''; } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); } }
+async function onSetup() { const p1 = document.getElementById('new-passphrase').value; const p2 = document.getElementById('confirm-passphrase').value; if (p1.length < 8) { alert('Minimal 8 karakter'); return; } if (p1 !== p2) { alert('Passphrase tidak cocok'); return; } showLoading(); try { await registerPassphrase(p1); alert('Vault berhasil dibuat! Silakan login.'); showScreen('login-screen'); document.getElementById('passphrase-input').value = ''; } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); } }
 
 // ============================================================
-// INIT
+// INIT - OTOMATIS DETEKSI ADA ATAU TIDAK AKUN
 // ============================================================
 async function init() {
     await initDB();
     const hasAuth = await checkAuth();
-    showScreen(hasAuth ? 'login-screen' : 'setup-screen');
+    
+    if (hasAuth) {
+        // Sudah punya akun → langsung tampilkan login
+        showScreen('login-screen');
+    } else {
+        // Belum punya akun → tampilkan setup (buat akun baru)
+        showScreen('setup-screen');
+    }
+    
+    // Bind event handlers
     document.getElementById('login-btn').onclick = onLogin;
     document.getElementById('decoy-btn').onclick = onDecoyMode;
     document.getElementById('wipe-btn').onclick = onWipe;
