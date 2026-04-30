@@ -2,44 +2,46 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOTE CRYPT - Encrypted Vault</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>NOTE CRYPT - Secure Encrypted Vault</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app">
-                <!-- LAYAR AUTH (LOGIN + SETUP DALAM SATU LAYAR) -->
+        <!-- LAYAR AUTH (LOGIN + SETUP DALAM SATU LAYAR) -->
         <div id="auth-screen" class="screen">
             <div class="login-container">
                 <div class="logo"><span class="logo-red">NOTE</span><span class="logo-white">CRYPT</span></div>
-                <div class="logo-sub">Secure Encrypted Vault</div>
+                <div class="logo-sub">Secure Encrypted Vault | AES-256-GCM</div>
                 
                 <div id="attempt-warning" class="attempt-warning" style="display: none;"></div>
                 
                 <!-- FORM SETUP (Buat Akun Baru) -->
                 <div id="setup-form">
                     <div class="input-group">
-                        <label>BUAT PASSPHRASE BARU</label>
-                        <input type="password" id="new-passphrase" class="pass-input" placeholder="Minimal 8 karakter">
+                        <label>🔐 BUAT PASSPHRASE BARU</label>
+                        <input type="password" id="new-passphrase" class="pass-input" placeholder="Minimal 8 karakter" autocomplete="off">
+                        <div class="input-hint">Gunakan kombinasi huruf, angka, dan simbol</div>
                     </div>
                     <div class="input-group">
-                        <label>ULANGI PASSPHRASE</label>
-                        <input type="password" id="confirm-passphrase" class="pass-input" placeholder="Ketik ulang">
+                        <label>📋 ULANGI PASSPHRASE</label>
+                        <input type="password" id="confirm-passphrase" class="pass-input" placeholder="Ketik ulang passphrase" autocomplete="off">
                     </div>
                     <div class="button-group">
-                        <button id="setup-create-btn" class="btn btn-primary">BUAT VAULT</button>
+                        <button id="setup-create-btn" class="btn btn-primary">✨ BUAT VAULT</button>
                     </div>
                 </div>
                 
                 <!-- FORM LOGIN (Masuk dengan Passphrase) -->
                 <div id="login-form" style="display: none;">
                     <div class="input-group">
-                        <label>MASUKKAN PASSPHRASE</label>
-                        <input type="password" id="passphrase-input" class="pass-input" placeholder="••••••••">
+                        <label>🔑 MASUKKAN PASSPHRASE</label>
+                        <input type="password" id="passphrase-input" class="pass-input" placeholder="••••••••" autocomplete="off">
+                        <div class="input-hint">Masukkan passphrase yang sudah dibuat sebelumnya</div>
                     </div>
                     <div class="button-group">
-                        <button id="login-btn" class="btn btn-primary">BUKA VAULT</button>
+                        <button id="login-btn" class="btn btn-primary">🚪 BUKA VAULT</button>
                     </div>
                 </div>
                 
@@ -52,14 +54,17 @@
                 
                 <div class="button-group">
                     <button id="decoy-btn" class="btn btn-secondary">📦 DECOY MODE</button>
-                    <button id="wipe-btn" class="btn btn-danger">⚠️ EMERGENCY WIPE</button>
+                    <button id="wipe-btn" class="btn btn-danger">💀 EMERGENCY WIPE</button>
                 </div>
                 
-                <div class="info-text">🔐 Enkripsi AES-256-GCM | Data hanya di browser Anda</div>
+                <div class="info-text">
+                    <span>🔐 Enkripsi AES-256-GCM | Data hanya di browser Anda</span><br>
+                    <span>💾 Backup data secara berkala melalui menu di dalam vault</span>
+                </div>
             </div>
         </div>
         
-        <!-- LAYAR UTAMA -->
+        <!-- LAYAR UTAMA (VAULT) -->
         <div id="main-screen" class="screen" style="display: none;">
             <div class="header">
                 <div class="header-left">
@@ -67,9 +72,11 @@
                     <span id="mode-badge" class="mode-badge">🔐 SECURE VAULT</span>
                 </div>
                 <div class="header-right">
+                    <button id="backup-btn" class="icon-btn" title="Backup Data">💾</button>
+                    <button id="restore-btn" class="icon-btn" title="Restore Data">📀</button>
                     <button id="new-note-btn" class="icon-btn" title="Catatan Baru">+</button>
                     <button id="logout-btn" class="icon-btn" title="Logout">🚪</button>
-                    <button id="wipe-main-btn" class="icon-btn danger" title="Hapus Data">💀</button>
+                    <button id="wipe-main-btn" class="icon-btn danger" title="Hapus Semua Data">💀</button>
                 </div>
             </div>
             <div class="main-content">
@@ -89,7 +96,7 @@
                         </div>
                         <div id="attachment-list" class="attachment-list"><div class="empty-attachment">Belum ada gambar</div></div>
                     </div>
-                    <textarea id="note-content" class="note-content" placeholder="Tulis catatanmu di sini..."></textarea>
+                    <textarea id="note-content" class="note-content" placeholder="Tulis catatanmu di sini...&#10;&#10;✨ Fitur:&#10;- Teks biasa dengan format bebas&#10;- Upload gambar (support file besar, dipecah otomatis)&#10;- Semua data terenkripsi AES-256-GCM&#10;- Backup & Restore data untuk keamanan"></textarea>
                     <div class="editor-footer">
                         <button id="save-note-btn" class="btn-save">💾 SIMPAN</button>
                         <button id="delete-note-btn" class="btn-delete">🗑️ HAPUS CATATAN</button>
@@ -101,14 +108,25 @@
         <!-- MODAL FULLSCREEN GAMBAR -->
         <div id="image-modal" class="modal" style="display: none;">
             <div class="modal-content">
-                <div class="modal-header"><span id="modal-title">Gambar</span><button id="modal-close" class="modal-close">&times;</button></div>
-                <div class="modal-body"><img id="modal-image" src="" alt="Full size"></div>
-                <div class="modal-footer"><span id="modal-info"></span><button id="modal-save" class="modal-save-btn">💾 Simpan</button></div>
+                <div class="modal-header">
+                    <span id="modal-title">Gambar</span>
+                    <button id="modal-close" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <img id="modal-image" src="" alt="Full size">
+                </div>
+                <div class="modal-footer">
+                    <span id="modal-info"></span>
+                    <button id="modal-save" class="modal-save-btn">💾 Simpan Gambar</button>
+                </div>
             </div>
         </div>
         
         <!-- LOADING OVERLAY -->
-        <div id="loading-overlay" class="loading-overlay" style="display: none;"><div class="spinner"></div><div>Memproses...</div></div>
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="spinner"></div>
+            <div>Memproses...</div>
+        </div>
     </div>
     <script src="app.js"></script>
 </body>

@@ -1,12 +1,12 @@
 /**
  * NOTE CRYPT - Web Version
- * Satu layar: Setup + Login (Toggle)
+ * Fitur: Setup/Login toggle, Chunked Upload, Backup & Restore
  */
 
 // ============================================================
 // KONSTANTA
 // ============================================================
-const DB_NAME = 'NoteCryptV3';
+const DB_NAME = 'NoteCryptV4';
 const DB_VERSION = 1;
 const STORE_NOTES = 'notes';
 const STORE_ATTACHMENTS = 'attachments';
@@ -41,6 +41,8 @@ function showSetupForm() {
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('toggle-auth-text').innerHTML = 'Sudah punya akun? <span class="toggle-link">Masuk</span>';
     document.getElementById('attempt-warning').style.display = 'none';
+    document.getElementById('new-passphrase').value = '';
+    document.getElementById('confirm-passphrase').value = '';
 }
 
 function showLoginForm() {
@@ -69,7 +71,7 @@ async function encryptChunk(data, passphrase) {
     combined.set(salt, 0);
     combined.set(iv, salt.length);
     combined.set(new Uint8Array(encrypted), salt.length + iv.length);
-    return { data: Array.from(combined), salt: Array.from(salt), iv: Array.from(iv) };
+    return { data: Array.from(combined) };
 }
 
 async function decryptChunk(encryptedObj, passphrase) {
@@ -193,6 +195,96 @@ async function wipeAllData() {
     await deleteFromStore(STORE_AUTH, 'passphrase_hash');
     notesCache = [];
     attachmentsCache.clear();
+}
+
+// ============================================================
+// BACKUP & RESTORE
+// ============================================================
+async function exportBackup() {
+    showLoading();
+    try {
+        const notes = await getAllFromStore(STORE_NOTES);
+        const attachments = await getAllFromStore(STORE_ATTACHMENTS);
+        const chunks = await getAllFromStore(STORE_CHUNKS);
+        const auth = await getFromStore(STORE_AUTH, 'passphrase_hash');
+        
+        const backupData = {
+            version: 2,
+            timestamp: new Date().toISOString(),
+            app: 'NOTE_CRYPT',
+            notes: notes,
+            attachments: attachments,
+            chunks: chunks,
+            auth: auth
+        };
+        
+        const jsonStr = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `note_crypt_backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        alert('✅ Backup berhasil dibuat!\nFile JSON telah diunduh.\nSimpan file ini di tempat aman.');
+    } catch(err) {
+        alert('Gagal backup: ' + err.message);
+    } finally {
+        hideLoading();
+    }
+}
+
+async function importBackup() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const backupData = JSON.parse(event.target.result);
+                
+                if (backupData.app !== 'NOTE_CRYPT' && backupData.version !== 2) {
+                    if (!confirm('File ini mungkin bukan backup NOTE CRYPT. Lanjutkan?')) return;
+                }
+                
+                if (!confirm('⚠️ PERINGATAN ⚠️\n\nRestore akan MENIMPA semua data yang ada saat ini!\nData lama akan hilang.\n\nLanjutkan restore?')) return;
+                
+                showLoading();
+                
+                // Hapus data lama
+                await wipeAllData();
+                
+                // Restore data
+                for (const note of backupData.notes || []) {
+                    await putToStore(STORE_NOTES, note);
+                }
+                for (const att of backupData.attachments || []) {
+                    await putToStore(STORE_ATTACHMENTS, att);
+                }
+                for (const chunk of backupData.chunks || []) {
+                    await putToStore(STORE_CHUNKS, chunk);
+                }
+                if (backupData.auth) {
+                    await putToStore(STORE_AUTH, backupData.auth);
+                }
+                
+                await refreshCache();
+                alert('✅ Restore berhasil!\nSilakan login ulang dengan passphrase lama Anda.');
+                location.reload();
+                
+            } catch(err) {
+                alert('❌ File backup rusak atau tidak valid: ' + err.message);
+            } finally {
+                hideLoading();
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
 }
 
 // ============================================================
@@ -321,7 +413,7 @@ async function onNewNote() { currentNoteId = null; document.getElementById('note
 async function onSaveNote() {
     const title = document.getElementById('note-title').value.trim();
     const content = document.getElementById('note-content').value;
-    if (!title && !content) { alert('Isi judul atau konten'); return; }
+    if (!title && !content) { alert('Isi judul atau konten catatan'); return; }
     showLoading();
     try {
         let attachments = [];
@@ -330,10 +422,10 @@ async function onSaveNote() {
         await saveNote(currentNoteId, title || 'Untitled', content, attachments);
         renderNotes();
         alert('Catatan tersimpan');
-    } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); }
+    } catch(e) { alert('Gagal menyimpan: ' + e.message); } finally { hideLoading(); }
 }
 async function onDeleteNote() {
-    if (!currentNoteId) { alert('Pilih catatan'); return; }
+    if (!currentNoteId) { alert('Pilih catatan terlebih dahulu'); return; }
     if (!confirm('Yakin ingin menghapus catatan ini beserta semua gambarnya?')) return;
     showLoading();
     try {
@@ -343,10 +435,11 @@ async function onDeleteNote() {
         document.getElementById('note-content').value = '';
         document.getElementById('attachment-list').innerHTML = '<div class="empty-attachment">Belum ada gambar</div>';
         renderNotes();
-    } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); }
+        alert('Catatan dihapus');
+    } catch(e) { alert('Gagal menghapus: ' + e.message); } finally { hideLoading(); }
 }
 async function onAddImage() {
-    if (!currentNoteId) { alert('Buat atau pilih catatan dulu'); return; }
+    if (!currentNoteId) { alert('Buat atau pilih catatan terlebih dahulu'); return; }
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -354,7 +447,7 @@ async function onAddImage() {
         const file = e.target.files[0];
         if (!file) return;
         const sizeMB = file.size / (1024 * 1024);
-        if (!confirm(`Upload gambar: ${file.name} (${sizeMB.toFixed(1)}MB)\n\nGambar akan dipecah jadi potongan kecil. Lanjutkan?`)) return;
+        if (!confirm(`Upload gambar: ${file.name} (${sizeMB.toFixed(1)}MB)\n\nGambar akan dipecah jadi potongan 1MB. Lanjutkan?`)) return;
         try {
             const result = await saveLargeImage(file);
             const noteData = await loadNote(currentNoteId);
@@ -362,7 +455,7 @@ async function onAddImage() {
             attachments.push({ id: result.id, originalName: result.originalName, size: result.size });
             await saveNote(currentNoteId, noteData?.title || '', noteData?.content || '', attachments);
             await renderAttachments();
-            alert(`Gambar ${result.originalName} berhasil diupload (${formatBytes(result.size)})`);
+            alert(`✅ Gambar ${result.originalName} berhasil diupload (${formatBytes(result.size)})`);
         } catch(err) { alert('Gagal upload: ' + err.message); }
     };
     input.click();
@@ -392,7 +485,7 @@ async function onDeleteAttachment(attachmentId) {
             await deleteLargeImage(attachmentId);
             await renderAttachments();
         }
-    } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); }
+    } catch(e) { alert('Gagal hapus: ' + e.message); } finally { hideLoading(); }
 }
 
 // ============================================================
@@ -414,9 +507,10 @@ async function onLogin() {
             document.getElementById('note-title').value = '';
             document.getElementById('note-content').value = '';
             document.getElementById('attachment-list').innerHTML = '<div class="empty-attachment">Belum ada gambar</div>';
+            document.getElementById('storage-info').innerHTML = `📊 ${notesCache.length} catatan | Gunakan 💾 untuk backup`;
         } else {
             const attempts = await getFailedAttempts();
-            if (attempts >= 3) { if (confirm('3x gagal! Hapus data?')) { await wipeAllData(); location.reload(); } }
+            if (attempts >= 3) { if (confirm('3x percobaan gagal! Hapus semua data?')) { await wipeAllData(); location.reload(); } }
             else { const warn = document.getElementById('attempt-warning'); warn.textContent = `⚠️ Passphrase salah! Sisa percobaan: ${3 - attempts}/3`; warn.style.display = 'block'; document.getElementById('passphrase-input').value = ''; }
         }
     } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); }
@@ -425,12 +519,12 @@ async function onLogin() {
 async function onSetup() {
     const p1 = document.getElementById('new-passphrase').value;
     const p2 = document.getElementById('confirm-passphrase').value;
-    if (p1.length < 8) { alert('Minimal 8 karakter'); return; }
+    if (p1.length < 8) { alert('Passphrase minimal 8 karakter'); return; }
     if (p1 !== p2) { alert('Passphrase tidak cocok'); return; }
     showLoading();
     try {
         await registerPassphrase(p1);
-        alert('Vault berhasil dibuat! Sekarang login.');
+        alert('✅ Vault berhasil dibuat! Silakan login dengan passphrase Anda.');
         showLoginForm();
         document.getElementById('new-passphrase').value = '';
         document.getElementById('confirm-passphrase').value = '';
@@ -438,24 +532,25 @@ async function onSetup() {
 }
 
 async function onDecoyMode() {
-    currentPassphrase = 'decoy_mode';
+    currentPassphrase = 'decoy_mode_' + Date.now();
     notesCache = [];
     showScreen('main-screen');
-    document.getElementById('mode-badge').textContent = '📦 DECOY MODE';
+    document.getElementById('mode-badge').textContent = '📦 DECOY MODE (Data Tidak Terenkripsi)';
     renderNotes();
     currentNoteId = null;
     document.getElementById('note-title').value = '';
     document.getElementById('note-content').value = '';
     document.getElementById('attachment-list').innerHTML = '<div class="empty-attachment">Belum ada gambar</div>';
+    document.getElementById('storage-info').innerHTML = '⚠️ DECOY MODE - Data tidak aman';
 }
 
 async function onWipe() { 
-    if (!confirm('⚠️ HAPUS SEMUA DATA? (TIDAK BISA KEMBALI)')) return; 
+    if (!confirm('⚠️ PERINGATAN AKHIR ⚠️\n\nSEMUA CATATAN DAN GAMBAR AKAN DIHAPUS PERMANEN\nTIDAK BISA DIKEMBALIKAN\n\nApakah Anda yakin?')) return; 
     if (prompt('Ketik "HAPUS" untuk konfirmasi') !== 'HAPUS') return; 
     showLoading(); 
     try { 
         await wipeAllData(); 
-        alert('Data dihapus. Refresh...'); 
+        alert('✅ Semua data telah dihapus. Halaman akan refresh.');
         location.reload(); 
     } catch(e) { alert('Error: ' + e.message); } 
     finally { hideLoading(); } 
@@ -478,14 +573,11 @@ async function init() {
     await initDB();
     const hasAuth = await checkAuth();
     
-    // Tampilkan auth screen
     showScreen('auth-screen');
     
     if (hasAuth) {
-        // Sudah punya akun → tampilkan form login
         showLoginForm();
     } else {
-        // Belum punya akun → tampilkan form setup
         showSetupForm();
     }
     
@@ -500,6 +592,8 @@ async function init() {
     document.getElementById('save-note-btn').onclick = onSaveNote;
     document.getElementById('delete-note-btn').onclick = onDeleteNote;
     document.getElementById('add-image-btn').onclick = onAddImage;
+    document.getElementById('backup-btn').onclick = exportBackup;
+    document.getElementById('restore-btn').onclick = importBackup;
     document.getElementById('modal-close').onclick = () => document.getElementById('image-modal').style.display = 'none';
     document.getElementById('image-modal').onclick = (e) => { if (e.target.id === 'image-modal') document.getElementById('image-modal').style.display = 'none'; };
     
@@ -515,7 +609,7 @@ async function init() {
         }
     });
     
-    // Enter key untuk login
+    // Enter key handlers
     document.getElementById('passphrase-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') onLogin(); });
     document.getElementById('new-passphrase').addEventListener('keypress', (e) => { if (e.key === 'Enter') onSetup(); });
     document.getElementById('confirm-passphrase').addEventListener('keypress', (e) => { if (e.key === 'Enter') onSetup(); });
