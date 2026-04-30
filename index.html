@@ -9,43 +9,53 @@
 </head>
 <body>
     <div id="app">
-        <!-- LAYAR LOGIN -->
-        <div id="login-screen" class="screen">
+                <!-- LAYAR AUTH (LOGIN + SETUP DALAM SATU LAYAR) -->
+        <div id="auth-screen" class="screen">
             <div class="login-container">
                 <div class="logo"><span class="logo-red">NOTE</span><span class="logo-white">CRYPT</span></div>
                 <div class="logo-sub">Secure Encrypted Vault</div>
+                
                 <div id="attempt-warning" class="attempt-warning" style="display: none;"></div>
-                <div class="input-group">
-                    <label>PASSPHRASE</label>
-                    <input type="password" id="passphrase-input" class="pass-input" placeholder="••••••••">
-                    <div class="input-hint">Minimal 8 karakter | Lupa passphrase = data hilang</div>
+                
+                <!-- FORM SETUP (Buat Akun Baru) -->
+                <div id="setup-form">
+                    <div class="input-group">
+                        <label>BUAT PASSPHRASE BARU</label>
+                        <input type="password" id="new-passphrase" class="pass-input" placeholder="Minimal 8 karakter">
+                    </div>
+                    <div class="input-group">
+                        <label>ULANGI PASSPHRASE</label>
+                        <input type="password" id="confirm-passphrase" class="pass-input" placeholder="Ketik ulang">
+                    </div>
+                    <div class="button-group">
+                        <button id="setup-create-btn" class="btn btn-primary">BUAT VAULT</button>
+                    </div>
                 </div>
+                
+                <!-- FORM LOGIN (Masuk dengan Passphrase) -->
+                <div id="login-form" style="display: none;">
+                    <div class="input-group">
+                        <label>MASUKKAN PASSPHRASE</label>
+                        <input type="password" id="passphrase-input" class="pass-input" placeholder="••••••••">
+                    </div>
+                    <div class="button-group">
+                        <button id="login-btn" class="btn btn-primary">BUKA VAULT</button>
+                    </div>
+                </div>
+                
+                <!-- Toggle Link -->
+                <div class="toggle-auth">
+                    <span id="toggle-auth-text">Sudah punya akun? <span class="toggle-link">Masuk</span></span>
+                </div>
+                
+                <div class="divider"></div>
+                
                 <div class="button-group">
-                    <button id="login-btn" class="btn btn-primary">BUKA VAULT</button>
-                    <button id="decoy-btn" class="btn btn-secondary">DECOY MODE</button>
+                    <button id="decoy-btn" class="btn btn-secondary">📦 DECOY MODE</button>
                     <button id="wipe-btn" class="btn btn-danger">⚠️ EMERGENCY WIPE</button>
                 </div>
+                
                 <div class="info-text">🔐 Enkripsi AES-256-GCM | Data hanya di browser Anda</div>
-            </div>
-        </div>
-        
-        <!-- LAYAR SETUP -->
-        <div id="setup-screen" class="screen" style="display: none;">
-            <div class="login-container">
-                <div class="logo"><span class="logo-red">NOTE</span><span class="logo-white">CRYPT</span></div>
-                <div class="logo-sub">First Time Setup</div>
-                <div class="input-group">
-                    <label>BUAT PASSPHRASE BARU</label>
-                    <input type="password" id="new-passphrase" class="pass-input" placeholder="Minimal 8 karakter">
-                </div>
-                <div class="input-group">
-                    <label>ULANGI PASSPHRASE</label>
-                    <input type="password" id="confirm-passphrase" class="pass-input" placeholder="Ketik ulang">
-                </div>
-                <div class="button-group">
-                    <button id="setup-create-btn" class="btn btn-primary">BUAT VAULT</button>
-                </div>
-                <div class="info-text warning">⚠️ PERINGATAN: Lupa passphrase = semua data hilang permanen!</div>
             </div>
         </div>
         

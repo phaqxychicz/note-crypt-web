@@ -79,3 +79,29 @@ body { font-family: 'Inter', sans-serif; background: #000000; color: #E0E0E0; ov
 ::-webkit-scrollbar-track { background: #0A0A0A; }
 ::-webkit-scrollbar-thumb { background: #333333; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #D32F2F; }
+
+/* Toggle Auth Link */
+.toggle-auth {
+    text-align: center;
+    margin: 20px 0 10px 0;
+    padding: 10px;
+    font-size: 13px;
+    color: #666666;
+}
+
+.toggle-link {
+    color: #D32F2F;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.toggle-link:hover {
+    text-decoration: underline;
+}
+
+.divider {
+    height: 1px;
+    background: #1A1A1A;
+    margin: 20px 0;
+}

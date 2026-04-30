@@ -1,6 +1,6 @@
 /**
- * NOTE CRYPT - Web Version (Login Only - No Register Button)
- * Jika sudah punya akun, tinggal masukkan passphrase
+ * NOTE CRYPT - Web Version
+ * Satu layar: Setup + Login (Toggle)
  */
 
 // ============================================================
@@ -28,13 +28,28 @@ let attachmentsCache = new Map();
 function showLoading() { document.getElementById('loading-overlay').style.display = 'flex'; }
 function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
 function showScreen(screenId) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('main-screen').style.display = 'none';
     document.getElementById(screenId).style.display = 'block';
 }
 function escapeHtml(text) { if (!text) return ''; const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 function formatBytes(bytes) { if (bytes === 0) return '0 B'; const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k)); return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]; }
+
+// Toggle between Setup and Login forms
+function showSetupForm() {
+    document.getElementById('setup-form').style.display = 'block';
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('toggle-auth-text').innerHTML = 'Sudah punya akun? <span class="toggle-link">Masuk</span>';
+    document.getElementById('attempt-warning').style.display = 'none';
+}
+
+function showLoginForm() {
+    document.getElementById('setup-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('toggle-auth-text').innerHTML = 'Belum punya akun? <span class="toggle-link">Buat baru</span>';
+    document.getElementById('attempt-warning').style.display = 'none';
+    document.getElementById('passphrase-input').value = '';
+}
 
 // ============================================================
 // KRIPTOGRAFI
@@ -379,6 +394,10 @@ async function onDeleteAttachment(attachmentId) {
         }
     } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); }
 }
+
+// ============================================================
+// AUTH HANDLERS
+// ============================================================
 async function onLogin() {
     const passphrase = document.getElementById('passphrase-input').value;
     if (!passphrase) { alert('Masukkan passphrase'); return; }
@@ -402,31 +421,79 @@ async function onLogin() {
         }
     } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); }
 }
-async function onLogout() { currentPassphrase = null; currentNoteId = null; notesCache = []; showScreen('login-screen'); document.getElementById('passphrase-input').value = ''; document.getElementById('attempt-warning').style.display = 'none'; }
-async function onWipe() { if (!confirm('⚠️ HAPUS SEMUA DATA? (TIDAK BISA KEMBALI)')) return; if (prompt('Ketik "HAPUS" untuk konfirmasi') !== 'HAPUS') return; showLoading(); try { await wipeAllData(); alert('Data dihapus. Refresh...'); location.reload(); } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); } }
-async function onDecoyMode() { currentPassphrase = 'decoy_mode'; notesCache = []; showScreen('main-screen'); document.getElementById('mode-badge').textContent = '📦 DECOY MODE'; renderNotes(); currentNoteId = null; document.getElementById('note-title').value = ''; document.getElementById('note-content').value = ''; document.getElementById('attachment-list').innerHTML = '<div class="empty-attachment">Belum ada gambar</div>'; }
-async function onSetup() { const p1 = document.getElementById('new-passphrase').value; const p2 = document.getElementById('confirm-passphrase').value; if (p1.length < 8) { alert('Minimal 8 karakter'); return; } if (p1 !== p2) { alert('Passphrase tidak cocok'); return; } showLoading(); try { await registerPassphrase(p1); alert('Vault berhasil dibuat! Silakan login.'); showScreen('login-screen'); document.getElementById('passphrase-input').value = ''; } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); } }
+
+async function onSetup() {
+    const p1 = document.getElementById('new-passphrase').value;
+    const p2 = document.getElementById('confirm-passphrase').value;
+    if (p1.length < 8) { alert('Minimal 8 karakter'); return; }
+    if (p1 !== p2) { alert('Passphrase tidak cocok'); return; }
+    showLoading();
+    try {
+        await registerPassphrase(p1);
+        alert('Vault berhasil dibuat! Sekarang login.');
+        showLoginForm();
+        document.getElementById('new-passphrase').value = '';
+        document.getElementById('confirm-passphrase').value = '';
+    } catch(e) { alert('Error: ' + e.message); } finally { hideLoading(); }
+}
+
+async function onDecoyMode() {
+    currentPassphrase = 'decoy_mode';
+    notesCache = [];
+    showScreen('main-screen');
+    document.getElementById('mode-badge').textContent = '📦 DECOY MODE';
+    renderNotes();
+    currentNoteId = null;
+    document.getElementById('note-title').value = '';
+    document.getElementById('note-content').value = '';
+    document.getElementById('attachment-list').innerHTML = '<div class="empty-attachment">Belum ada gambar</div>';
+}
+
+async function onWipe() { 
+    if (!confirm('⚠️ HAPUS SEMUA DATA? (TIDAK BISA KEMBALI)')) return; 
+    if (prompt('Ketik "HAPUS" untuk konfirmasi') !== 'HAPUS') return; 
+    showLoading(); 
+    try { 
+        await wipeAllData(); 
+        alert('Data dihapus. Refresh...'); 
+        location.reload(); 
+    } catch(e) { alert('Error: ' + e.message); } 
+    finally { hideLoading(); } 
+}
+
+async function onLogout() { 
+    currentPassphrase = null; 
+    currentNoteId = null; 
+    notesCache = []; 
+    showScreen('auth-screen'); 
+    showLoginForm();
+    document.getElementById('passphrase-input').value = ''; 
+    document.getElementById('attempt-warning').style.display = 'none'; 
+}
 
 // ============================================================
-// INIT - OTOMATIS DETEKSI ADA ATAU TIDAK AKUN
+// INIT
 // ============================================================
 async function init() {
     await initDB();
     const hasAuth = await checkAuth();
     
+    // Tampilkan auth screen
+    showScreen('auth-screen');
+    
     if (hasAuth) {
-        // Sudah punya akun → langsung tampilkan login
-        showScreen('login-screen');
+        // Sudah punya akun → tampilkan form login
+        showLoginForm();
     } else {
-        // Belum punya akun → tampilkan setup (buat akun baru)
-        showScreen('setup-screen');
+        // Belum punya akun → tampilkan form setup
+        showSetupForm();
     }
     
     // Bind event handlers
     document.getElementById('login-btn').onclick = onLogin;
+    document.getElementById('setup-create-btn').onclick = onSetup;
     document.getElementById('decoy-btn').onclick = onDecoyMode;
     document.getElementById('wipe-btn').onclick = onWipe;
-    document.getElementById('setup-create-btn').onclick = onSetup;
     document.getElementById('new-note-btn').onclick = onNewNote;
     document.getElementById('logout-btn').onclick = onLogout;
     document.getElementById('wipe-main-btn').onclick = onWipe;
@@ -435,6 +502,23 @@ async function init() {
     document.getElementById('add-image-btn').onclick = onAddImage;
     document.getElementById('modal-close').onclick = () => document.getElementById('image-modal').style.display = 'none';
     document.getElementById('image-modal').onclick = (e) => { if (e.target.id === 'image-modal') document.getElementById('image-modal').style.display = 'none'; };
+    
+    // Toggle link handler
+    document.getElementById('toggle-auth-text').addEventListener('click', (e) => {
+        if (e.target.classList.contains('toggle-link')) {
+            const isLoginVisible = document.getElementById('login-form').style.display !== 'none';
+            if (isLoginVisible) {
+                showSetupForm();
+            } else {
+                showLoginForm();
+            }
+        }
+    });
+    
+    // Enter key untuk login
     document.getElementById('passphrase-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') onLogin(); });
+    document.getElementById('new-passphrase').addEventListener('keypress', (e) => { if (e.key === 'Enter') onSetup(); });
+    document.getElementById('confirm-passphrase').addEventListener('keypress', (e) => { if (e.key === 'Enter') onSetup(); });
 }
+
 init();
